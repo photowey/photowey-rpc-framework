@@ -1,0 +1,12 @@
+#rpc:
+#  client:
+#    zk:
+#      root: "/zk"
+#      connectString: "192.168.0.11:2181"
+#      session-timeout: 5000
+#      connection-timeout: 5000
+#    api:
+#      packages: "com.photowey.hello.api.service"
+#  cluster:
+#    # @see com.photowey.rpc.core.enums.ClusterStrategyEnum
+#    strategy: random

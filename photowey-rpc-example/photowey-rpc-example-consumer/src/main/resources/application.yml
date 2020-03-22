@@ -1,0 +1,15 @@
+server:
+  port: 4399
+
+rpc:
+  client:
+    zookeeper:
+      root: "/rpc/root"
+      connect-string: "192.168.0.11:2181"
+      session-timeout: 5000
+      connect-timeout: 5000
+    api:
+      packages: "com.photowey.example.api.service"
+  cluster:
+    # @see com.photowey.rpc.core.enums.ClusterStrategyEnum
+    strategy: random

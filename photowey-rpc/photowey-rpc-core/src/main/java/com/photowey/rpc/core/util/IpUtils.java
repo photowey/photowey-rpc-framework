@@ -1,0 +1,147 @@
+package com.photowey.rpc.core.util;
+
+import com.photowey.rpc.core.enums.RpcStatus;
+import com.photowey.rpc.core.exception.RpcException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.servlet.http.HttpServletRequest;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.UnknownHostException;
+import java.util.Enumeration;
+
+/**
+ * IpUtils Util
+ *
+ * @author WcJun
+ * @date 2020/02/21
+ * @since v1.0.0
+ */
+public final class IpUtils {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(IpUtils.class);
+
+    private IpUtils() {
+        throw new AssertionError("No " + getClass().getName() + " instances for you!");
+    }
+
+    private static final String X_FORWARDED_FOR = "x-forwarded-for";
+    private static final String UNKNOWN = "unknown";
+    private static final String PROXY_CLIENT_IP = "Proxy-Client-IP";
+    private static final String WL_PROXY_CLIENT_IP = "WL-Proxy-Client-IP";
+    private static final String LOCALHOST = "127.0.0.1";
+    private static final Integer LENGTH = 15;
+    private static final String SEPARATOR_COMMA = ",";
+
+    /**
+     * get Client IpAddress by HttpServletRequest Header
+     *
+     * @param request HttpServletRequest
+     * @return the real Ip
+     * @author WcJun
+     * @date 2017/08/23
+     */
+    public static String getIpAddr(HttpServletRequest request) {
+
+        // x-forwarded-for
+        String ip = request.getHeader(X_FORWARDED_FOR);
+
+        // Proxy-Client-IP
+        if (RpcUtils.isEmpty(ip) || UNKNOWN.equalsIgnoreCase(ip)) {
+            ip = request.getHeader(PROXY_CLIENT_IP);
+        }
+
+        // WL-Proxy-Client-IP
+        if (RpcUtils.isEmpty(ip) || UNKNOWN.equalsIgnoreCase(ip)) {
+            ip = request.getHeader(WL_PROXY_CLIENT_IP);
+        }
+
+        // 127.0.0.1
+        if (RpcUtils.isEmpty(ip) || UNKNOWN.equalsIgnoreCase(ip)) {
+            ip = request.getRemoteAddr();
+            if (ip.equals(LOCALHOST)) {
+                // het localhost IP by network cards
+                InetAddress inetaddress = null;
+                try {
+                    inetaddress = InetAddress.getLocalHost();
+                } catch (UnknownHostException e) {
+                    LOGGER.error("ip parse exception", e);
+                }
+                if (null != inetaddress) {
+                    ip = inetaddress.getHostAddress();
+                }
+            }
+        }
+        // for multiple proxy the first is real address
+        if (ip != null && ip.length() > LENGTH) {
+            if (ip.indexOf(SEPARATOR_COMMA) > 0) {
+                ip = ip.substring(0, ip.indexOf(SEPARATOR_COMMA));
+            }
+        }
+
+        return ip;
+    }
+
+    // ==========================================================
+    //  @copy from arthas
+    //  @see * https://github.com/alibaba/arthas
+    //  @see * https://github.com/alibaba/arthas/blob/master/core/src/main/java/com/taobao/arthas/core/util/IPUtils.java
+    // ==========================================================
+
+    private static final String WINDOWS = "windows";
+    private static final String OS_NAME = "os.name";
+
+    /**
+     * check: whether current operating system is windows
+     *
+     * @return true---is windows
+     */
+    public static boolean isWindowsOS() {
+        String osName = System.getProperty(OS_NAME);
+        return osName.toLowerCase().contains(WINDOWS);
+    }
+
+    /**
+     * get IP address, automatically distinguish the operating system.（windows or linux）
+     *
+     * @return String
+     */
+    public static String getLocalIP() {
+        InetAddress ip = null;
+        try {
+            if (isWindowsOS()) {
+                ip = InetAddress.getLocalHost();
+            } else {
+                // scan all NetWorkInterfaces if it's loopback address
+                if (!InetAddress.getLocalHost().isLoopbackAddress()) {
+                    ip = InetAddress.getLocalHost();
+                } else {
+                    boolean bFindIP = false;
+                    Enumeration<NetworkInterface> netInterfaces = NetworkInterface.getNetworkInterfaces();
+                    while (netInterfaces.hasMoreElements()) {
+                        if (bFindIP) {
+                            break;
+                        }
+                        NetworkInterface ni = netInterfaces.nextElement();
+                        // ----------特定情况，可以考虑用ni.getName判断
+                        // iterator all IPs
+                        Enumeration<InetAddress> ips = ni.getInetAddresses();
+                        while (ips.hasMoreElements()) {
+                            ip = ips.nextElement();
+                            // IP starts with 127. is loopback address
+                            if (ip.isSiteLocalAddress() && !ip.isLoopbackAddress() && !ip.getHostAddress().contains(":")) {
+                                bFindIP = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            throw new RpcException(RpcStatus.FAILURE.toValue(), "find the local ip exception", e);
+        }
+
+        return ip == null ? null : ip.getHostAddress();
+    }
+}
