@@ -1,12 +1,16 @@
 package com.photowey.rpc.client.proxy.factory.rpc;
 
-import com.photowey.rpc.client.proxy.RpcFactoryMapping;
+import com.photowey.rpc.client.proxy.factory.CglibProxyFactory;
 import com.photowey.rpc.client.proxy.factory.ProxyFactory;
 import com.photowey.rpc.core.exception.RpcException;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.photowey.rpc.core.util.RpcUtils;
+import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.BeanFactory;
+import org.springframework.beans.factory.BeanFactoryAware;
 import org.springframework.stereotype.Component;
 
-import java.util.Collection;
+import java.util.List;
+import java.util.ServiceLoader;
 
 /**
  * ProxyRpcFactory
@@ -16,21 +20,34 @@ import java.util.Collection;
  * @since v1.0.0
  */
 @Component
-public class ProxyRpcFactory implements RpcFactory {
+public class ProxyRpcFactory implements RpcFactory, BeanFactoryAware {
 
-    @Autowired
-    private RpcFactoryMapping rpcFactoryMapping;
+    private BeanFactory beanFactory;
+
+    @Override
+    public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
+        this.beanFactory = beanFactory;
+    }
 
     @Override
     public <T> T createProxy(String targetProxy, Class<T>[] interfaces) throws RpcException {
-        // ServiceLoader<ProxyFactory> proxyFactories = ServiceLoader.load(ProxyFactory.class);
-        Collection<ProxyFactory> proxyFactories = this.rpcFactoryMapping.proxyFactories().values();
-        for (ProxyFactory proxyFactory : proxyFactories) {
-            if (proxyFactory.supports(targetProxy)) {
-                return proxyFactory.buildProxy(targetProxy, interfaces, proxyFactory.getInvoker(interfaces[0], null, null));
+        ServiceLoader<ProxyFactory> proxyFactories = ServiceLoader.load(ProxyFactory.class);
+        List<ProxyFactory> targets = RpcUtils.toList(proxyFactories.iterator());
+        if (RpcUtils.isNotEmpty(targets)) {
+            for (ProxyFactory proxyFactory : targets) {
+                if (proxyFactory.supports(targetProxy)) {
+                    return proxyFactory.buildProxy(targetProxy, interfaces, proxyFactory.getInvoker(interfaces[0], null, null));
+                }
             }
+        } else {
+            CglibProxyFactory proxyFactory = this.getDefaultProxyFactory();
+            return proxyFactory.buildProxy(targetProxy, interfaces, proxyFactory.getInvoker(interfaces[0], null, null));
         }
 
         return null;
+    }
+
+    private CglibProxyFactory getDefaultProxyFactory() {
+        return this.beanFactory.getBean(CglibProxyFactory.class);
     }
 }

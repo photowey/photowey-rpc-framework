@@ -1,2 +1,0 @@
-com.photowey.rpc.client.proxy.factory.CglibProxyFactory
-com.photowey.rpc.client.proxy.factory.JdkProxyFactory

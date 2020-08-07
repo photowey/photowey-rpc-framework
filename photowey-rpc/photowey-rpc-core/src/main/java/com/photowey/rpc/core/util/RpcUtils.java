@@ -2,6 +2,8 @@ package com.photowey.rpc.core.util;
 
 import org.springframework.util.Assert;
 
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 
@@ -48,6 +50,17 @@ public class RpcUtils {
 
     public static <T> boolean isNotEmpty(List<T> target) {
         return !isEmpty(target);
+    }
+
+    // ============================================= List
+
+    public static <T> List<T> toList(Iterator<T> iterator) {
+        List<T> target = new ArrayList<>();
+        while (iterator.hasNext()) {
+            target.add(iterator.next());
+        }
+
+        return target;
     }
 
     // ============================================= Spring
