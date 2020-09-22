@@ -136,7 +136,7 @@ public class HelloController {
     // private HelloService helloService;
 
     /**
-     * GET :/wey
+     * GET :/sayHello
      *
      * @param name
      * @return
