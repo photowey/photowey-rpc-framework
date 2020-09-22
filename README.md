@@ -131,9 +131,8 @@ rpc:
 @RequestMapping("/rpc")
 public class HelloController {
 
-    // FIXME NPE
-    // @Autowired
-    // private HelloService helloService;
+    @Autowired
+    private HelloService helloService;
 
     /**
      * GET :/sayHello
@@ -144,10 +143,8 @@ public class HelloController {
      */
     @GetMapping("/sayHello")
     public String sayHello(@RequestParam(value = "name") String name) {
-        // Introducing HelloService with lazy loading
-        HelloService helloService = SpringContextHolder.getBean(HelloService.class);
         // say hello to someone,words:[I'm photowey!]
-        String sayHello = helloService.sayHello(name);
+        String sayHello = this.helloService.sayHello(name);
         log.info("the server response is:[{}]", sayHello);
         return sayHello;
     }
